@@ -1,10 +1,12 @@
-#include<stdio.h>
-#include<string.h>
+#include <stdio.h>
+#include <string.h>
+#include "commands.h"
 #define DELIM " "
 
 int parse_command (char *);
 
 int main () {
+  printf("Command Code for CAT: %s\n", CAT);
   char * input; // Pointer to the input buffer given by the user
   size_t size = 100;
   input = (char *) malloc(size*sizeof(char));
@@ -30,5 +32,19 @@ int parse_command (char * cmd) {
     printf(":::: %s\n",inputs[i]);
     i++;
     inputs[i] = strtok(0, DELIM);
+  }
+  i=0;
+  int pid = fork();
+  printf("PID::: %d\n", pid);
+  if (pid == 0) { // Child process runs here
+    printf("Inside child...");
+    char * command = "/bin/";
+    strcat(command , inputs[0]);
+    printf("Final path of the command: %s\n", command);
+    int res = execv(command, inputs);
+    printf("Returned from Execv: %d\n",res);
+  }
+  else {
+    wait(NULL);
   }
 }
