@@ -1,3 +1,2 @@
 /bin/
 /usr/bin/
-/Users/sreekar/Desktop/

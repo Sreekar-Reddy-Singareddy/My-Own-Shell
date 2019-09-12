@@ -18,7 +18,7 @@ int main () {
     getline(&input, &size, stdin); // Read the input from the input source
     input = strtok(input, "\n"); // Just remove the unwanted newline character
     
-    while (strcmp("exit",input) != 0) { // As long as the input is NOT "exit", take inputs
+    while (1) { // Run this forever
         parse_command(input);
         input[0] = '\0'; // Clear the string (virtually) after its used
         printf("dash (PID:: %d)> ",getpid()); // Continue to take another input
@@ -40,6 +40,25 @@ int parse_command (char * inputCommand) {
         printf(":::: %s\n",inputs[i]);
         i++;
         inputs[i] = strtok(0, DELIM);
+    }
+    if (strcmp(inputs[0], "exit") == 0) { // Builtin Command - Exit the dash
+        if (i != 1) { // exit MUST have NO arguments
+            printf("Invalid number of args for %s\n", inputs[0]);
+            return -1;
+        }
+        puts("Adios Amigo!\n");
+        exit(0);
+    }
+    else if (strcmp(inputs[0], "cd") == 0) { // Builtin Command - change the current directory
+        if (i != 2) { // cd MUST have only 1 argument
+            printf("Invalid number of args for %s\n", inputs[0]);
+            return -1;
+        }
+        chdir(inputs[1]);
+        return 0;
+    }
+    else if (strcmp(inputs[0], "path")) { // Builtin Command - change the path of the executables
+        
     }
     horizonLine();
     
