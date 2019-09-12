@@ -8,6 +8,7 @@
 #define PATH_DELIM ":"
 int parse_command (char *);
 char* check_command (char *);
+int run_command(char * path, char * args[]);
 
 int main () {
     char * input; // Pointer to the input buffer given by the user
@@ -57,8 +58,9 @@ int parse_command (char * inputCommand) {
         chdir(inputs[1]);
         return 0;
     }
-    else if (strcmp(inputs[0], "path")) { // Builtin Command - change the path of the executables
-        
+    else if (strcmp(inputs[0], "path") == 0) { // Builtin Command - change the path of the executables
+        run_command("change_paths", inputs);
+        return 0;
     }
     horizonLine();
     
@@ -76,19 +78,8 @@ int parse_command (char * inputCommand) {
     // Executable is found. So run it in a different process
     i=0;
     horizonLine();
-    int pid = fork();
-    if (pid == 0) { // Child process runs here
-        printf("Inside the child. -> ");
-        //strcat(path, inputs[0]);
-        //printf("Look up path: %s\n", path);
-        //horizonLine();
-        int res = execv(whichPath, inputs);
-        printf("Returned from Execv: %d\n",res);
-        exit(res);
-    }
-    else {
-        wait(NULL);
-    }
+    run_command(whichPath, inputs);
+    horizonLine();
     return 0;
 }
 
@@ -124,4 +115,20 @@ char* check_command (char * cmd) {
     fclose(file);
     horizonLine();
     return "";
+}
+
+int run_command (char * path, char * args) {
+    int pid = fork();
+    if (pid == 0) { // Child process runs here
+        printf("Inside the child. -> ");
+        //strcat(path, inputs[0]);
+        //printf("Look up path: %s\n", path);
+        //horizonLine();
+        int res = execv(path, args);
+        printf("Returned from Execv: %d\n",res);
+        exit(res);
+    }
+    else {
+        wait(NULL);
+    }
 }
