@@ -1,6 +1,6 @@
 #include <stdio.h>
-#define LS "ls"
-#define CAT "cat"
+
+#define EXEC_FILE_PATH "executables.txt"
 
 int horizonLine();
 

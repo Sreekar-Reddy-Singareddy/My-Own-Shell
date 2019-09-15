@@ -3,11 +3,14 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
-#include "commands.h"
-#include "paths.h"
+#include "utilities.h"
 #define DELIM " "
 #define PATH_DELIM ":"
 #define DELIM_PARALLEL "&"
+#define PATH_BUILTIN_CMD "path"
+#define CD_BUILTIN_CMD "cd"
+#define EXIT_BUILTIN_CMD "exit"
+#define EXECUTABLE_NOT_FOUND "None"
 
 // hello there & whats up & how are you
 
@@ -57,14 +60,15 @@ int main (int count, char * args[]) {
         
         printf("dash (PID:: %d)> ",getpid());
         getline(&input, &size, stdin); // Read the input from the input source
-        input = strtok(input, "\n"); // Just remove the unwanted newline character
         
         while (1) { // Run this forever
-            parse_input(input);
+            if (strcmp(input,"\n") != 0) {
+                input = strtok(input,"\n");
+                parse_input(input);
+            }
             input[0] = '\0'; // Clear the string (virtually) after its used
             printf("dash (PID:: %d)> ",getpid()); // Continue to take another input
             getline(&input, &size, stdin); // Read the input from the input source
-            input = strtok(input,"\n");
         }
     }
     else {
@@ -147,7 +151,7 @@ int parse_input (char * input) {
 
 // Checks if the given command is a builtin command or not
 int is_builtin_command (char * command) {
-    if (strcmp(command, "exit") == 0 || strcmp(command, "cd") == 0 || strcmp(command, "path") == 0) {
+    if (strcmp(command, EXIT_BUILTIN_CMD) == 0 || strcmp(command, CD_BUILTIN_CMD) == 0 || strcmp(command, PATH_BUILTIN_CMD) == 0) {
         return 1;
     }
     return 0;
@@ -156,9 +160,9 @@ int is_builtin_command (char * command) {
 // This executes the builtin commands in the parent process
 int process_builtin_command (int count, char * components[]) {
 //    printf("'%s' command runs in process with PID = %d\n", components[0], getpid());
-    if (strcmp(components[0], "exit") == 0) { // Builtin Command - exit the dash
+    if (strcmp(components[0], EXIT_BUILTIN_CMD) == 0) { // Builtin Command - exit the dash
         if (count == 1) { // exit MUST have only 0 argument
-            printf("Adios Amigo! :)\n");
+            printf("Adios Amigo!\n");
             exit(0);
             return 0;
         }
@@ -167,7 +171,7 @@ int process_builtin_command (int count, char * components[]) {
             return -1;
         }
     }
-    else if (strcmp(components[0], "cd") == 0) { // Builtin Command - change the current directory
+    else if (strcmp(components[0], CD_BUILTIN_CMD) == 0) { // Builtin Command - change the current directory
         if (count != 2) { // cd MUST have only 1 argument
             error_occured();
             return -1;
@@ -176,8 +180,8 @@ int process_builtin_command (int count, char * components[]) {
         if (errno != 0) error_occured();
         return 0;
     }
-    else if (strcmp(components[0], "path") == 0) { // Builtin Command - change the path of the executables
-        run_command("change_paths", components, 0);
+    else if (strcmp(components[0], PATH_BUILTIN_CMD) == 0) { // Builtin Command - change the path of the executables
+        run_command(PATH_BUILTIN_CMD, components, 0);
         return 0;
     }
     return -1;
@@ -194,8 +198,8 @@ int process_command (int count, char * components[]) {
     char * exec_file_path;
     exec_file_path = (char *) malloc(30*sizeof(char));
     strcpy(exec_file_path, check_command(components[0]));
-//    printf("The command can be run from: %s\n", exec_file_path);
-    if (strcmp(exec_file_path, "None") == 0) {
+    printf("The command can be run from: %s\n", exec_file_path);
+    if (strcmp(exec_file_path, EXECUTABLE_NOT_FOUND) == 0) {
         error_occured();
         return -1;
     }
@@ -215,7 +219,9 @@ char* check_command (char * cmd) {
     FILE * file;
     
     // Read all paths from the list
-    file = fopen("/Users/sreekar/Desktop/S Drive/MS CS/OS_CS5348/Projects/My-Own-Shell/SAMPLE.txt", "r+");
+    file = fopen(EXEC_FILE_PATH, "r+");
+//    printf("ErrorNo: %d\n", errno);
+    if (errno == 2) {error_occured(); return EXECUTABLE_NOT_FOUND;}
     paths[i] = (char *) malloc(50*sizeof(char));
     fgets(paths[i], 32, file);
     while (strcmp(paths[i], "") != 0) {
@@ -234,7 +240,7 @@ char* check_command (char * cmd) {
         fgets(paths[i], 32, file);
     }
     fclose(file);
-    return "None";
+    return EXECUTABLE_NOT_FOUND;
 }
 
 // Takes the path of the executable command
