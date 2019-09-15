@@ -186,7 +186,12 @@ int process_builtin_command (int count, char * components[]) {
     }
     else if (strcmp(components[0], PATH_BUILTIN_CMD) == 0) { // Builtin Command - change the path of the executables
       //printf("Path BUILTIN\n");
-        run_command(PATH_CMD_PATH, components, 0);
+        if (fork() == 0) {
+            run_command(PATH_CMD_PATH, components, 0);
+        }
+        else {
+            wait(NULL);
+        }
         return 0;
     }
     return -1;
