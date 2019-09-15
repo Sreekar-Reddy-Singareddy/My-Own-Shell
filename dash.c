@@ -4,6 +4,9 @@
 #include <unistd.h>
 #include <errno.h>
 #include "utilities.h"
+#include <sys/types.h>
+#include <sys/wait.h>
+
 #define DELIM " "
 #define PATH_DELIM ":"
 #define DELIM_PARALLEL "&"
@@ -11,6 +14,7 @@
 #define CD_BUILTIN_CMD "cd"
 #define EXIT_BUILTIN_CMD "exit"
 #define EXECUTABLE_NOT_FOUND "None"
+#define PATH_CMD_PATH "/home/011/s/sx/sxs190008/CS5348/Project_1/My-Own-Shell/path"
 
 // hello there & whats up & how are you
 
@@ -181,7 +185,8 @@ int process_builtin_command (int count, char * components[]) {
         return 0;
     }
     else if (strcmp(components[0], PATH_BUILTIN_CMD) == 0) { // Builtin Command - change the path of the executables
-        run_command(PATH_BUILTIN_CMD, components, 0);
+      //printf("Path BUILTIN\n");
+        run_command(PATH_CMD_PATH, components, 0);
         return 0;
     }
     return -1;
@@ -258,6 +263,7 @@ void run_command (char * path, char * args[], int outputTarget) {
     }
     int res = execv(path, args);
     // Below code executes only if execv() fails
+    //printf("After executing... %d", res);
     freopen("/dev/tty", "w+", stdout);
     freopen("/dev/tty", "w+", stderr);
     error_occured();

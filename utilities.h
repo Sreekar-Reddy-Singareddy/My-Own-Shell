@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-#define EXEC_FILE_PATH "executables.txt"
+#define EXEC_FILE_PATH "/home/011/s/sx/sxs190008/CS5348/Project_1/My-Own-Shell/executables.txt"
 
 int horizonLine();
 
