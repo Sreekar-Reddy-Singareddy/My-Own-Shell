@@ -17,7 +17,7 @@
 // Function prototype declaration
 int parse_command(char *);
 char* check_command(char *);
-void run_command(char *, char *, int);
+void run_command(char *, char * [], int);
 int parse_input(char *);
 int split_str(const char *, char *, char * []);
 void remove_spaces(int, char * []);
@@ -245,7 +245,7 @@ char* check_command (char * cmd) {
 
 // Takes the path of the executable command
 // along with the arguments. Runs the command.
-void run_command (char * path, char * args, int outputTarget) {
+void run_command (char * path, char * args[], int outputTarget) {
     // Check if output has to be redirected to another file
     if (OUTPUT_PATH != NULL) { // It means the output must go into a file
 //        printf("Output must be redirected to another file at: %s\n", OUTPUT_PATH);

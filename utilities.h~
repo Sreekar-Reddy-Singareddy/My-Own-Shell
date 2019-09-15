@@ -6,7 +6,6 @@ int horizonLine();
 
 int horizonLine() {
   puts("======================================================");
-  return 0;
 }
 
 void error_occured() {
