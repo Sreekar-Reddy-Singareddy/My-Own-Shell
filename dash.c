@@ -14,26 +14,34 @@
 // Function prototype declaration
 int parse_command(char *);
 char* check_command(char *);
-int run_command(char *, char *, int);
+void run_command(char *, char *, int);
 int parse_input(char *);
 int split_str(const char *, char *, char * []);
 void remove_spaces(int, char * []);
 int process_command(int, char * []);
 int process_builtin_command(int, char * []);
 int is_builtin_command(char *);
+int has_multiple_files(char *);
+
+// Path of the output file
+char * OUTPUT_PATH;
 
 // Collects input from the user.
 int main (int count, char * args[]) {
     // Check if this is interactive or batch mode
     if (count == 2) {
         // Batch mode
-        puts("Running in batch mode.");
+//        puts("Running in batch mode.");
         FILE * file;
         file = fopen(args[1], "r");
+        if (errno != 0) {
+            error_occured();
+            exit(1);
+        }
         char * command_line = (char *) malloc(100*sizeof(char));
         fgets(command_line, 100, file);
         while (strcmp(command_line, "") != 0) {
-            printf("Line read: %s\n", command_line);
+//            printf("Line read: %s\n", command_line);
             command_line = strtok(command_line, "\n");
             parse_input(command_line);
             *command_line = '\0';
@@ -60,8 +68,8 @@ int main (int count, char * args[]) {
         }
     }
     else {
-        printf("An error has occured\n");
-        exit(0);
+        error_occured();
+        exit(1);
     }
 }
 
@@ -69,9 +77,41 @@ int main (int count, char * args[]) {
 // and parses it with '&'.
 // Next it parses each command for arguments using ' '.
 int parse_input (char * input) {
-    // 1. Try splitting the input by '&'
+    // 0. Split the input by '>'. The output MUST have exactly 2 args
+    int len = strlen(input);
+    int k=0;
+    int red_symbs = 0;
+    while (k<len) {
+        if (*(input+k) == '>') red_symbs++;
+        k++;
+    }
+    if (red_symbs > 1) {
+        error_occured();
+        return -1;
+    }
+    char * redirects[2];
+    int num_of_redirects = split_str(">", input, redirects); // Split them by '>'
+    remove_spaces(num_of_redirects, redirects); // Remove leading and trailing spaces
+    redirects[0] = strtok(redirects[0], "\n"); // Cutoff newline character
+    if (redirects[1] != NULL) {
+        int multiple_files = has_multiple_files(redirects[1]); // Checks if there are multiple files given
+        if (multiple_files == 1) {
+            error_occured();
+            return -1;
+        }
+    }
+    // Copy the path of the output file and save in global variable
+    // for future access.
+    OUTPUT_PATH = redirects[1]; // This could be NULL.
+//    printf("Target file: %s\n", OUTPUT_PATH);
+    if (num_of_redirects > 2) {
+        error_occured();
+        return -1;
+    }
+    
+    // 1. Splitting the input by '&'
     char * commands[20];
-    int num_of_commands = split_str(DELIM_PARALLEL, input, commands); // This gives the number of parallel commands
+    int num_of_commands = split_str(DELIM_PARALLEL, redirects[0], commands); // This gives the number of parallel commands
     
     // 2. Filter each command by removing spaces
     remove_spaces(num_of_commands, commands); // This removes leading and trailing spaces from all commands
@@ -115,23 +155,25 @@ int is_builtin_command (char * command) {
 
 // This executes the builtin commands in the parent process
 int process_builtin_command (int count, char * components[]) {
-    printf("'%s' command runs in process with PID = %d\n", components[0], getpid());
+//    printf("'%s' command runs in process with PID = %d\n", components[0], getpid());
     if (strcmp(components[0], "exit") == 0) { // Builtin Command - exit the dash
         if (count == 1) { // exit MUST have only 0 argument
-            printf("Adios Amigo! :)");
+            printf("Adios Amigo! :)\n");
             exit(0);
+            return 0;
         }
         else {
-            printf("Invalid number of args for %s\n", components[0]);
+            error_occured();
+            return -1;
         }
-        return 0;
     }
     else if (strcmp(components[0], "cd") == 0) { // Builtin Command - change the current directory
         if (count != 2) { // cd MUST have only 1 argument
-            printf("Invalid number of args for %s\n", components[0]);
+            error_occured();
             return -1;
         }
         chdir(components[1]);
+        if (errno != 0) error_occured();
         return 0;
     }
     else if (strcmp(components[0], "path") == 0) { // Builtin Command - change the path of the executables
@@ -146,15 +188,15 @@ int process_builtin_command (int count, char * components[]) {
 // from where the command can be run.
 // Each command runs in its own child process.
 int process_command (int count, char * components[]) {
-    printf("'%s' command runs in process with PID = %d\n", components[0], getpid());
+//    printf("'%s' command runs in process with PID = %d\n", components[0], getpid());
     
     // Before proceeding to run the command, check for the exec file
     char * exec_file_path;
     exec_file_path = (char *) malloc(30*sizeof(char));
     strcpy(exec_file_path, check_command(components[0]));
-    printf("The command can be run from: %s\n", exec_file_path);
+//    printf("The command can be run from: %s\n", exec_file_path);
     if (strcmp(exec_file_path, "None") == 0) {
-        printf("%s command not found\n",components[0]);
+        error_occured();
         return -1;
     }
     
@@ -167,7 +209,7 @@ int process_command (int count, char * components[]) {
 // in any of the paths in SAMPLE.txt.
 // If exists, return the full path. Else, return "None".
 char* check_command (char * cmd) {
-    puts("In check_command func.");
+//    puts("In check_command func.");
     int i=0;
     char * paths[20];
     FILE * file;
@@ -180,10 +222,10 @@ char* check_command (char * cmd) {
         // For every path, append the command
         paths[i] = strtok(paths[i], "\n");
         strcat(paths[i], cmd);
-        printf("%d: %s\n",i+1,paths[i]);
+//        printf("%d: %s\n",i+1,paths[i]);
         // For every path, check if the file exists
         if (access(paths[i], X_OK) == 0) {
-            puts("File is executable!");
+//            puts("File is executable!");
             fclose(file);
             return paths[i];
         }
@@ -197,20 +239,23 @@ char* check_command (char * cmd) {
 
 // Takes the path of the executable command
 // along with the arguments. Runs the command.
-int run_command (char * path, char * args, int outputTarget) {
-    if (outputTarget == 1) { // It means the output must go into a file
-        freopen("output.txt", "w+", stdout);
+void run_command (char * path, char * args, int outputTarget) {
+    // Check if output has to be redirected to another file
+    if (OUTPUT_PATH != NULL) { // It means the output must go into a file
+//        printf("Output must be redirected to another file at: %s\n", OUTPUT_PATH);
+        freopen(OUTPUT_PATH, "w+", stdout);
+        freopen(OUTPUT_PATH, "w+", stderr);
     }
     else {
         freopen("/dev/tty", "w+", stdout);
+        freopen("/dev/tty", "w+", stderr);
     }
-    horizonLine();
     int res = execv(path, args);
     // Below code executes only if execv() fails
     freopen("/dev/tty", "w+", stdout);
-    printf("Returned from Execv: %d\n",res);
+    freopen("/dev/tty", "w+", stderr);
+    error_occured();
     exit(res);
-    return 0;
 }
 
 // Takes a string and splits it using @delim and puts each
@@ -219,7 +264,7 @@ int split_str(const char * delim, char * input, char * comps[]) {
     int i=0;
     comps[i] = strtok(input, delim);
     while (comps[i] != 0) {
-        printf("**%s**\n", comps[i]);
+//        printf("**%s**\n", comps[i]);
         i++;
         comps[i] = strtok(0, delim);
     }
@@ -254,7 +299,18 @@ void remove_spaces(int count, char * comps[]) {
                 trailing = 1;
             }
         }
-        printf("**%s**\n", comps[i]);
+//        printf("**%s**\n", comps[i]);
         i++;
     }
+}
+
+// Returns 1 if multiple file names are given after redirection symbol
+int has_multiple_files (char * file_part) {
+    int len = strlen(file_part);
+    int i=0;
+    while (i<len) {
+        if (*(file_part+i) == ' ') return 1;
+        i++;
+    }
+    return 0;
 }

@@ -1,0 +1,4 @@
+ls -a
+pwd
+cat SAMPLE.txt
+ls --a
