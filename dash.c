@@ -203,7 +203,7 @@ int process_command (int count, char * components[]) {
     char * exec_file_path;
     exec_file_path = (char *) malloc(30*sizeof(char));
     strcpy(exec_file_path, check_command(components[0]));
-    printf("The command can be run from: %s\n", exec_file_path);
+    //printf("The command can be run from: %s\n", exec_file_path);
     if (strcmp(exec_file_path, EXECUTABLE_NOT_FOUND) == 0) {
         error_occured();
         return -1;
@@ -232,7 +232,8 @@ char* check_command (char * cmd) {
     while (strcmp(paths[i], "") != 0) {
         // For every path, append the command
         paths[i] = strtok(paths[i], "\n");
-        strcat(paths[i], cmd);
+        strcat(paths[i], "/");
+	strcat(paths[i], cmd);
 //        printf("%d: %s\n",i+1,paths[i]);
         // For every path, check if the file exists
         if (access(paths[i], X_OK) == 0) {
