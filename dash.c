@@ -20,6 +20,7 @@ int split_str(const char *, char *, char * []);
 void remove_spaces(int, char * []);
 int process_command(int, char * []);
 int process_builtin_command(int, char * []);
+int is_builtin_command(char *);
 
 // Collects input from the user.
 int main (int count, char * args[]) {
@@ -80,19 +81,18 @@ int parse_input (char * input) {
     while (i<num_of_commands) {
         char * components[10];
         int num_of_comps = split_str(DELIM, commands[i], components);
-        // Check if this command is an exit built in command
-        if (components[0]) {
-            if (strcmp(components[0], "exit") == 0) { // Builtin Command - Exit the dash
-                if (num_of_comps != 1) { // exit MUST have NO arguments
-                    printf("Invalid number of args for %s\n", components[0]);
-                    return -1;
-                }
-                puts("Adios Amigo!\n");
-                exit(0);
-            }
+        int is_builtin = 0;
+        
+        // Check if it is built in command
+        is_builtin = is_builtin_command(components[0]);
+        if (is_builtin == 1) {
+            process_builtin_command(num_of_comps, components);
+            break;
         }
+        
         // Create a new process for each command and run it in there
-        if (fork() == 0) {
+        // if it is NOT a built in command
+        if (fork() == 0 && is_builtin == 0) {
             process_command(num_of_comps, components);
             exit(0);
         }
@@ -105,18 +105,28 @@ int parse_input (char * input) {
     return 0;
 }
 
-int process_builtin_command (int count, char * components[]) {
-    printf("'%s' command runs in process with PID = %d\n", components[0], getpid());
-    return -1;
+// Checks if the given command is a builtin command or not
+int is_builtin_command (char * command) {
+    if (strcmp(command, "exit") == 0 || strcmp(command, "cd") == 0 || strcmp(command, "path") == 0) {
+        return 1;
+    }
+    return 0;
 }
 
-// This processes a command by checking if it can be
-// run or not. If it can be run, it gets the path
-// from where the command can be run.
-// Each command runs in its own child process.
-int process_command (int count, char * components[]) {
+// This executes the builtin commands in the parent process
+int process_builtin_command (int count, char * components[]) {
     printf("'%s' command runs in process with PID = %d\n", components[0], getpid());
-    if (strcmp(components[0], "cd") == 0) { // Builtin Command - change the current directory
+    if (strcmp(components[0], "exit") == 0) { // Builtin Command - exit the dash
+        if (count == 1) { // exit MUST have only 0 argument
+            printf("Adios Amigo! :)");
+            exit(0);
+        }
+        else {
+            printf("Invalid number of args for %s\n", components[0]);
+        }
+        return 0;
+    }
+    else if (strcmp(components[0], "cd") == 0) { // Builtin Command - change the current directory
         if (count != 2) { // cd MUST have only 1 argument
             printf("Invalid number of args for %s\n", components[0]);
             return -1;
@@ -128,6 +138,15 @@ int process_command (int count, char * components[]) {
         run_command("change_paths", components, 0);
         return 0;
     }
+    return -1;
+}
+
+// This processes a command by checking if it can be
+// run or not. If it can be run, it gets the path
+// from where the command can be run.
+// Each command runs in its own child process.
+int process_command (int count, char * components[]) {
+    printf("'%s' command runs in process with PID = %d\n", components[0], getpid());
     
     // Before proceeding to run the command, check for the exec file
     char * exec_file_path;
