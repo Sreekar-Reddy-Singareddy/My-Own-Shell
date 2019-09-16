@@ -1,13 +1,8 @@
 #include <stdio.h>
 
-#define EXEC_FILE_PATH "/home/011/s/sx/sxs190008/CS5348/Project_1/My-Own-Shell/executables.txt"
+#define EXEC_FILE_PATH "/cs5348-xv6/sxs190008/P1/executables.txt"
 
-int horizonLine();
-
-int horizonLine() {
-  puts("======================================================");
-  return 0;
-}
+void error_occured();
 
 void error_occured() {
 //    char err_msg[30] = "An error has occured!!!\n";

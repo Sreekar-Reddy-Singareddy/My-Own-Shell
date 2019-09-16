@@ -1,3 +1,11 @@
+// Note: Instructions for a successful run
+// 1. 'utilities.h' header file
+// 2. 'path.c' source code
+// 3. In order to work well, recompile 'dash.c' & 'path.c'
+// 4. All the paths are stored in 'executables.txt' file in the current directory
+// 5. All the outputs (*.txt) will also be created and saved in the current directory
+
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -8,15 +16,12 @@
 #include <sys/wait.h>
 
 #define DELIM " "
-#define PATH_DELIM ":"
 #define DELIM_PARALLEL "&"
 #define PATH_BUILTIN_CMD "path"
 #define CD_BUILTIN_CMD "cd"
 #define EXIT_BUILTIN_CMD "exit"
 #define EXECUTABLE_NOT_FOUND "None"
-#define PATH_CMD_PATH "/home/011/s/sx/sxs190008/CS5348/Project_1/My-Own-Shell/path"
-
-// hello there & whats up & how are you
+#define PATH_CMD_PATH "/cs5348-xv6/sxs190008/P1/path"
 
 // Function prototype declaration
 int parse_command(char *);
@@ -32,13 +37,13 @@ int has_multiple_files(char *);
 
 // Path of the output file
 char * OUTPUT_PATH;
+int SHOULD_APPEND = 0;
 
 // Collects input from the user.
 int main (int count, char * args[]) {
     // Check if this is interactive or batch mode
     if (count == 2) {
         // Batch mode
-//        puts("Running in batch mode.");
         FILE * file;
         file = fopen(args[1], "r");
         if (errno != 0) {
@@ -48,7 +53,6 @@ int main (int count, char * args[]) {
         char * command_line = (char *) malloc(100*sizeof(char));
         fgets(command_line, 100, file);
         while (strcmp(command_line, "") != 0) {
-//            printf("Line read: %s\n", command_line);
             command_line = strtok(command_line, "\n");
             parse_input(command_line);
             *command_line = '\0';
@@ -111,7 +115,6 @@ int parse_input (char * input) {
     // Copy the path of the output file and save in global variable
     // for future access.
     OUTPUT_PATH = redirects[1]; // This could be NULL.
-//    printf("Target file: %s\n", OUTPUT_PATH);
     if (num_of_redirects > 2) {
         error_occured();
         return -1;
@@ -120,6 +123,8 @@ int parse_input (char * input) {
     // 1. Splitting the input by '&'
     char * commands[20];
     int num_of_commands = split_str(DELIM_PARALLEL, redirects[0], commands); // This gives the number of parallel commands
+    if (num_of_commands > 1) SHOULD_APPEND = 1;
+    else SHOULD_APPEND = 0;
     
     // 2. Filter each command by removing spaces
     remove_spaces(num_of_commands, commands); // This removes leading and trailing spaces from all commands
@@ -163,10 +168,9 @@ int is_builtin_command (char * command) {
 
 // This executes the builtin commands in the parent process
 int process_builtin_command (int count, char * components[]) {
-//    printf("'%s' command runs in process with PID = %d\n", components[0], getpid());
     if (strcmp(components[0], EXIT_BUILTIN_CMD) == 0) { // Builtin Command - exit the dash
         if (count == 1) { // exit MUST have only 0 argument
-            printf("Adios Amigo!\n");
+            printf("Good Bye!\n\n");
             exit(0);
             return 0;
         }
@@ -185,7 +189,6 @@ int process_builtin_command (int count, char * components[]) {
         return 0;
     }
     else if (strcmp(components[0], PATH_BUILTIN_CMD) == 0) { // Builtin Command - change the path of the executables
-      //printf("Path BUILTIN\n");
         if (fork() == 0) {
             run_command(PATH_CMD_PATH, components, 0);
         }
@@ -202,13 +205,10 @@ int process_builtin_command (int count, char * components[]) {
 // from where the command can be run.
 // Each command runs in its own child process.
 int process_command (int count, char * components[]) {
-//    printf("'%s' command runs in process with PID = %d\n", components[0], getpid());
-    
     // Before proceeding to run the command, check for the exec file
     char * exec_file_path;
     exec_file_path = (char *) malloc(30*sizeof(char));
     strcpy(exec_file_path, check_command(components[0]));
-    //printf("The command can be run from: %s\n", exec_file_path);
     if (strcmp(exec_file_path, EXECUTABLE_NOT_FOUND) == 0) {
         error_occured();
         return -1;
@@ -223,14 +223,12 @@ int process_command (int count, char * components[]) {
 // in any of the paths in SAMPLE.txt.
 // If exists, return the full path. Else, return "None".
 char* check_command (char * cmd) {
-//    puts("In check_command func.");
     int i=0;
     char * paths[20];
     FILE * file;
     
     // Read all paths from the list
     file = fopen(EXEC_FILE_PATH, "r+");
-//    printf("ErrorNo: %d\n", errno);
     if (errno == 2) {error_occured(); return EXECUTABLE_NOT_FOUND;}
     paths[i] = (char *) malloc(50*sizeof(char));
     fgets(paths[i], 32, file);
@@ -239,10 +237,8 @@ char* check_command (char * cmd) {
         paths[i] = strtok(paths[i], "\n");
         strcat(paths[i], "/");
 	strcat(paths[i], cmd);
-//        printf("%d: %s\n",i+1,paths[i]);
         // For every path, check if the file exists
         if (access(paths[i], X_OK) == 0) {
-//            puts("File is executable!");
             fclose(file);
             return paths[i];
         }
@@ -259,9 +255,14 @@ char* check_command (char * cmd) {
 void run_command (char * path, char * args[], int outputTarget) {
     // Check if output has to be redirected to another file
     if (OUTPUT_PATH != NULL) { // It means the output must go into a file
-//        printf("Output must be redirected to another file at: %s\n", OUTPUT_PATH);
-        freopen(OUTPUT_PATH, "w+", stdout);
-        freopen(OUTPUT_PATH, "w+", stderr);
+        if (SHOULD_APPEND == 1) {
+            freopen(OUTPUT_PATH, "a+", stdout);
+            freopen(OUTPUT_PATH, "a+", stderr);
+        }
+        else {
+            freopen(OUTPUT_PATH, "w+", stdout);
+            freopen(OUTPUT_PATH, "w+", stderr);
+        }
     }
     else {
         freopen("/dev/tty", "w+", stdout);
@@ -269,7 +270,6 @@ void run_command (char * path, char * args[], int outputTarget) {
     }
     int res = execv(path, args);
     // Below code executes only if execv() fails
-    //printf("After executing... %d", res);
     freopen("/dev/tty", "w+", stdout);
     freopen("/dev/tty", "w+", stderr);
     error_occured();
@@ -282,7 +282,6 @@ int split_str(const char * delim, char * input, char * comps[]) {
     int i=0;
     comps[i] = strtok(input, delim);
     while (comps[i] != 0) {
-//        printf("**%s**\n", comps[i]);
         i++;
         comps[i] = strtok(0, delim);
     }
@@ -317,7 +316,6 @@ void remove_spaces(int count, char * comps[]) {
                 trailing = 1;
             }
         }
-//        printf("**%s**\n", comps[i]);
         i++;
     }
 }
